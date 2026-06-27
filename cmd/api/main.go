@@ -19,6 +19,8 @@ func main() {
 
 	transactionQueue := applicationQueue.NewTransactionQueue(100)
 
+	deadLetterQueue := applicationQueue.NewDeadLetterQueue()
+
 	createTransactionUseCase :=
 		application.NewCreateTransactionUseCase(
 			repository,
@@ -26,9 +28,11 @@ func main() {
 		)
 
 	for i := 1; i <= 3; i++ {
+
 		worker := worker.NewTransactionWorker(
 			i,
 			transactionQueue,
+			deadLetterQueue,
 			repository,
 		)
 
@@ -39,6 +43,7 @@ func main() {
 		handlers.NewTransactionHandler(
 			createTransactionUseCase,
 			repository,
+			deadLetterQueue,
 		)
 
 	router := chi.NewRouter()
@@ -51,6 +56,11 @@ func main() {
 	router.Get(
 		"/transactions/{id}",
 		transactionHandler.GetTransaction,
+	)
+
+	router.Get(
+		"/dead-letter-queue",
+		transactionHandler.GetDeadLetterQueue,
 	)
 
 	fmt.Println("Server running on :8080")

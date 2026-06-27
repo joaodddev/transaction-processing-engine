@@ -1,6 +1,9 @@
 package usecase
 
-import "github.com/joaodddev/transaction-processing-engine/internal/domain"
+import (
+	"github.com/joaodddev/transaction-processing-engine/internal/application/queue"
+	"github.com/joaodddev/transaction-processing-engine/internal/domain"
+)
 
 type CreateTransactionInput struct {
 	AccountID string
@@ -19,14 +22,17 @@ type CreateTransactionOutput struct {
 
 type CreateTransactionUseCase struct {
 	repository domain.TransactionRepository
+	queue      *queue.TransactionQueue
 }
 
 func NewCreateTransactionUseCase(
 	repository domain.TransactionRepository,
+	queue *queue.TransactionQueue,
 ) *CreateTransactionUseCase {
 
 	return &CreateTransactionUseCase{
 		repository: repository,
+		queue:      queue,
 	}
 }
 
@@ -47,6 +53,8 @@ func (uc *CreateTransactionUseCase) Execute(
 	if err := uc.repository.Save(transaction); err != nil {
 		return nil, err
 	}
+
+	uc.queue.Publish(transaction.ID)
 
 	return &CreateTransactionOutput{
 		ID:        transaction.ID.String(),

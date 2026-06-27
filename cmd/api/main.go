@@ -6,10 +6,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	applicationQueue "github.com/joaodddev/transaction-processing-engine/internal/application/queue"
 	application "github.com/joaodddev/transaction-processing-engine/internal/application/usecase"
 	"github.com/joaodddev/transaction-processing-engine/internal/application/worker"
 	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/database"
+	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/messaging"
 	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/repository"
 	handlers "github.com/joaodddev/transaction-processing-engine/internal/interfaces/http"
 )
@@ -25,33 +25,37 @@ func main() {
 	repository :=
 		repository.NewPostgresTransactionRepository(db)
 
-	transactionQueue := applicationQueue.NewTransactionQueue(100)
+	rabbitMQ, err := messaging.NewRabbitMQ()
 
-	deadLetterQueue := applicationQueue.NewDeadLetterQueue()
+	if err != nil {
+		panic(err)
+	}
+
+	defer rabbitMQ.Connection.Close()
+	defer rabbitMQ.Channel.Close()
+
+	publisher :=
+		messaging.NewPublisher(rabbitMQ.Channel)
 
 	createTransactionUseCase :=
 		application.NewCreateTransactionUseCase(
 			repository,
-			transactionQueue,
+			publisher,
 		)
 
-	for i := 1; i <= 3; i++ {
+	if err := worker.StartConsumer(
+		rabbitMQ.Channel,
+		repository,
+	); err != nil {
 
-		worker := worker.NewTransactionWorker(
-			i,
-			transactionQueue,
-			deadLetterQueue,
-			repository,
-		)
-
-		worker.Start()
+		panic(err)
 	}
 
 	transactionHandler :=
 		handlers.NewTransactionHandler(
 			createTransactionUseCase,
 			repository,
-			deadLetterQueue,
+			nil,
 		)
 
 	router := chi.NewRouter()
@@ -64,11 +68,6 @@ func main() {
 	router.Get(
 		"/transactions/{id}",
 		transactionHandler.GetTransaction,
-	)
-
-	router.Get(
-		"/dead-letter-queue",
-		transactionHandler.GetDeadLetterQueue,
 	)
 
 	fmt.Println("Server running on :8080")

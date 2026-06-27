@@ -59,3 +59,61 @@ func TestNewTransaction_ShouldReturnErrorForInvalidAmount(
 		t.Error("expected error, got nil")
 	}
 }
+
+func TestTransaction_Approve(t *testing.T) {
+
+	transaction, _ := NewTransaction(
+		"account-123",
+		100,
+		"BRL",
+	)
+
+	transaction.Approve()
+
+	if transaction.Status != StatusApproved {
+		t.Errorf(
+			"expected APPROVED, got %s",
+			transaction.Status,
+		)
+	}
+
+	if transaction.ProcessedAt == nil {
+		t.Error("expected processed_at to be filled")
+	}
+}
+
+func TestTransaction_Fail(t *testing.T) {
+
+	transaction, _ := NewTransaction(
+		"account-123",
+		100,
+		"BRL",
+	)
+
+	transaction.Fail()
+
+	if transaction.Status != StatusFailed {
+		t.Errorf(
+			"expected FAILED, got %s",
+			transaction.Status,
+		)
+	}
+}
+
+func TestTransaction_Retry(t *testing.T) {
+
+	transaction, _ := NewTransaction(
+		"account-123",
+		100,
+		"BRL",
+	)
+
+	transaction.IncrementRetry()
+
+	if transaction.RetryCount != 1 {
+		t.Errorf(
+			"expected retry count 1, got %d",
+			transaction.RetryCount,
+		)
+	}
+}

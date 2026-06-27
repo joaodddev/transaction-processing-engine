@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/joaodddev/transaction-processing-engine/internal/domain"
-	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/messaging"
 )
 
 type CreateTransactionInput struct {
@@ -29,7 +28,7 @@ type CreateTransactionUseCase struct {
 
 func NewCreateTransactionUseCase(
 	repository domain.TransactionRepository,
-	publisher *messaging.Publisher,
+	publisher domain.MessagePublisher,
 ) *CreateTransactionUseCase {
 
 	return &CreateTransactionUseCase{

@@ -13,7 +13,7 @@ func TestCreateTransactionUseCase_Execute(
 
 	repository := mocks.NewTransactionRepositoryMock()
 
-	publisher := &messaging.Publisher{}
+	publisher domain.MessagePublisher
 
 	useCase := NewCreateTransactionUseCase(
 		repository,

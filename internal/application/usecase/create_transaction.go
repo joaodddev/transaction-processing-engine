@@ -1,8 +1,10 @@
 package usecase
 
 import (
-	"github.com/joaodddev/transaction-processing-engine/internal/application/queue"
+	"encoding/json"
+
 	"github.com/joaodddev/transaction-processing-engine/internal/domain"
+	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/messaging"
 )
 
 type CreateTransactionInput struct {
@@ -22,17 +24,17 @@ type CreateTransactionOutput struct {
 
 type CreateTransactionUseCase struct {
 	repository domain.TransactionRepository
-	queue      *queue.TransactionQueue
+	publisher  *messaging.Publisher
 }
 
 func NewCreateTransactionUseCase(
 	repository domain.TransactionRepository,
-	queue *queue.TransactionQueue,
+	publisher *messaging.Publisher,
 ) *CreateTransactionUseCase {
 
 	return &CreateTransactionUseCase{
 		repository: repository,
-		queue:      queue,
+		publisher:  publisher,
 	}
 }
 
@@ -54,7 +56,11 @@ func (uc *CreateTransactionUseCase) Execute(
 		return nil, err
 	}
 
-	uc.queue.Publish(transaction.ID)
+	payload, _ := json.Marshal(transaction)
+
+	if err := uc.publisher.Publish(payload); err != nil {
+		return nil, err
+	}
 
 	return &CreateTransactionOutput{
 		ID:        transaction.ID.String(),

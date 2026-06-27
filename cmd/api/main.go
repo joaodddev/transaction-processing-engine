@@ -9,13 +9,21 @@ import (
 	applicationQueue "github.com/joaodddev/transaction-processing-engine/internal/application/queue"
 	application "github.com/joaodddev/transaction-processing-engine/internal/application/usecase"
 	"github.com/joaodddev/transaction-processing-engine/internal/application/worker"
+	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/database"
 	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/repository"
 	handlers "github.com/joaodddev/transaction-processing-engine/internal/interfaces/http"
 )
 
 func main() {
 
-	repository := repository.NewInMemoryTransactionRepository()
+	db, err := database.NewPostgresConnection()
+
+	if err != nil {
+		panic(err)
+	}
+
+	repository :=
+		repository.NewPostgresTransactionRepository(db)
 
 	transactionQueue := applicationQueue.NewTransactionQueue(100)
 

@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/joaodddev/transaction-processing-engine/configs"
 	application "github.com/joaodddev/transaction-processing-engine/internal/application/usecase"
 	"github.com/joaodddev/transaction-processing-engine/internal/application/worker"
 	"github.com/joaodddev/transaction-processing-engine/internal/infrastructure/database"
@@ -19,10 +20,11 @@ import (
 
 func main() {
 
+	cfg := configs.Load()
+
 	metrics.Register()
 
-	db, err := database.NewPostgresConnection()
-
+	db, err := database.NewPostgresConnection(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -30,8 +32,7 @@ func main() {
 	repository :=
 		repository.NewPostgresTransactionRepository(db)
 
-	rabbitMQ, err := messaging.NewRabbitMQ()
-
+	rabbitMQ, err := messaging.NewRabbitMQ(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -90,9 +91,16 @@ func main() {
 		promhttp.Handler(),
 	)
 
-	fmt.Println("Server running on :8080")
+	fmt.Printf(
+		"Server running on :%s\n",
+		cfg.ServerPort,
+	)
 
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	if err := http.ListenAndServe(
+		":"+cfg.ServerPort,
+		router,
+	); err != nil {
+
 		panic(err)
 	}
 }

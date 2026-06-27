@@ -7,6 +7,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/joaodddev/transaction-processing-engine/internal/domain"
+	"github.com/joaodddev/transaction-processing-engine/internal/observability/metrics"
 )
 
 func StartConsumer(
@@ -50,6 +51,8 @@ func StartConsumer(
 			transaction.StartProcessing()
 
 			transaction.Approve()
+
+			metrics.TransactionsProcessed.Inc()
 
 			if err := repository.Save(&transaction); err != nil {
 				log.Println(err)

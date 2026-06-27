@@ -4,6 +4,8 @@ import (
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/joaodddev/transaction-processing-engine/configs"
 )
 
 type RabbitMQ struct {
@@ -11,10 +13,12 @@ type RabbitMQ struct {
 	Channel    *amqp.Channel
 }
 
-func NewRabbitMQ() (*RabbitMQ, error) {
+func NewRabbitMQ(
+	cfg *configs.Config,
+) (*RabbitMQ, error) {
 
 	conn, err := amqp.Dial(
-		"amqp://admin:admin@localhost:5672/",
+		cfg.RabbitMQURL,
 	)
 
 	if err != nil {

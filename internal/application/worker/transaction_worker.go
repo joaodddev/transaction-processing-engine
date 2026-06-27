@@ -14,18 +14,21 @@ import (
 type TransactionWorker struct {
 	id         int
 	queue      *queue.TransactionQueue
+	dlq        *queue.DeadLetterQueue
 	repository domain.TransactionRepository
 }
 
 func NewTransactionWorker(
 	id int,
 	queue *queue.TransactionQueue,
+	dlq *queue.DeadLetterQueue,
 	repository domain.TransactionRepository,
 ) *TransactionWorker {
 
 	return &TransactionWorker{
 		id:         id,
 		queue:      queue,
+		dlq:        dlq,
 		repository: repository,
 	}
 }
@@ -59,16 +62,49 @@ func (w *TransactionWorker) process(id uuid.UUID) {
 
 	time.Sleep(3 * time.Second)
 
-	if rand.Intn(100) < 80 {
+	success := rand.Intn(100) < 50
+
+	if success {
 		transaction.Approve()
-	} else {
-		transaction.Reject()
+
+		log.Printf(
+			"[worker-%d] transaction %s approved",
+			w.id,
+			transaction.ID,
+		)
+
+		return
 	}
 
+	transaction.IncrementRetry()
+
 	log.Printf(
-		"[worker-%d] transaction %s finished with status %s",
+		"[worker-%d] transaction %s failed - retry %d/%d",
 		w.id,
-		transaction.ID.String(),
-		transaction.Status,
+		transaction.ID,
+		transaction.RetryCount,
+		transaction.MaxRetries,
+	)
+
+	if transaction.CanRetry() {
+
+		transaction.Status = domain.StatusPending
+
+		go func() {
+			time.Sleep(2 * time.Second)
+			w.queue.Publish(transaction.ID)
+		}()
+
+		return
+	}
+
+	transaction.Fail()
+
+	w.dlq.Add(transaction.ID)
+
+	log.Printf(
+		"[worker-%d] transaction %s moved to DLQ",
+		w.id,
+		transaction.ID,
 	)
 }

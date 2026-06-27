@@ -5,12 +5,21 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+
+	"github.com/joaodddev/transaction-processing-engine/configs"
 )
 
-func NewPostgresConnection() (*sql.DB, error) {
+func NewPostgresConnection(
+	cfg *configs.Config,
+) (*sql.DB, error) {
 
 	connStr := fmt.Sprintf(
-		"host=localhost port=5433 user=postgres password=postgres dbname=transaction_engine sslmode=disable",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBName,
 	)
 
 	db, err := sql.Open("postgres", connStr)

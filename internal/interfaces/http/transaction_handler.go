@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/joaodddev/transaction-processing-engine/internal/application/queue"
 	"github.com/joaodddev/transaction-processing-engine/internal/application/usecase"
 	"github.com/joaodddev/transaction-processing-engine/internal/domain"
 )
@@ -13,16 +14,19 @@ import (
 type TransactionHandler struct {
 	createTransactionUseCase *usecase.CreateTransactionUseCase
 	repository               domain.TransactionRepository
+	dlq                      *queue.DeadLetterQueue
 }
 
 func NewTransactionHandler(
 	createTransactionUseCase *usecase.CreateTransactionUseCase,
 	repository domain.TransactionRepository,
+	dlq *queue.DeadLetterQueue,
 ) *TransactionHandler {
 
 	return &TransactionHandler{
 		createTransactionUseCase: createTransactionUseCase,
 		repository:               repository,
+		dlq:                      dlq,
 	}
 }
 
@@ -92,4 +96,14 @@ func (h *TransactionHandler) GetTransaction(
 	w.Header().Set("Content-Type", "application/json")
 
 	json.NewEncoder(w).Encode(transaction)
+}
+
+func (h *TransactionHandler) GetDeadLetterQueue(
+	w nethttp.ResponseWriter,
+	r *nethttp.Request,
+) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(h.dlq.GetAll())
 }

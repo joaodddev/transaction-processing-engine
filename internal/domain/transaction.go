@@ -23,6 +23,8 @@ type Transaction struct {
 	Amount      float64           `json:"amount"`
 	Currency    string            `json:"currency"`
 	Status      TransactionStatus `json:"status"`
+	RetryCount  int               `json:"retry_count"`
+	MaxRetries  int               `json:"max_retries"`
 	CreatedAt   time.Time         `json:"created_at"`
 	ProcessedAt *time.Time        `json:"processed_at,omitempty"`
 }
@@ -46,13 +48,14 @@ func NewTransaction(
 	}
 
 	return &Transaction{
-		ID:          uuid.New(),
-		AccountID:   accountID,
-		Amount:      amount,
-		Currency:    currency,
-		Status:      StatusPending,
-		CreatedAt:   time.Now(),
-		ProcessedAt: nil,
+		ID:         uuid.New(),
+		AccountID:  accountID,
+		Amount:     amount,
+		Currency:   currency,
+		Status:     StatusPending,
+		RetryCount: 0,
+		MaxRetries: 3,
+		CreatedAt:  time.Now(),
 	}, nil
 }
 
@@ -79,4 +82,12 @@ func (t *Transaction) Fail() {
 
 	t.Status = StatusFailed
 	t.ProcessedAt = &now
+}
+
+func (t *Transaction) CanRetry() bool {
+	return t.RetryCount < t.MaxRetries
+}
+
+func (t *Transaction) IncrementRetry() {
+	t.RetryCount++
 }
